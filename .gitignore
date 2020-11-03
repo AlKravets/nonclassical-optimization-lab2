@@ -1,0 +1,12 @@
+*.log
+*.pyo
+*.pyc
+__pycache__/
+.vscode
+.ipynb_checkpoints
+*.aux
+*.dvi
+*.log
+*.pdf
+*.gz
+*.gif
