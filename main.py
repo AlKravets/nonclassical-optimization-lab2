@@ -45,7 +45,7 @@ class Engine:
     Класс в котором должна вычислятся вся физика.
     Для получения данных нужно будет толко подставить сетку.
     '''
-    def __init__(self, V_inf = 1 + 0j, obstacle_func = create_obstacle_plate, x0 = 0, y0 = 0, M = 50, delta = 10**-2, reverse = True):
+    def __init__(self, V_inf = 1 + 0j, obstacle_func = create_obstacle_plate, x0 = 0, y0 = 0, M = 20, delta = 5*10**-2, reverse = True):
         """
         Инициализация объекта.
         V_inf -- начальная скорость
@@ -171,7 +171,13 @@ class Engine:
             return z.real*self.V_inf.real + z.imag*self.V_inf.imag + np.sum(np.multiply( np.arctan2((z_m.imag - d_m.imag),
                         (z_m.real - d_m.real)).T/(2*np.pi), self.Gi), axis=1).reshape(z.shape)
         else:
-            pass
+            z_lv_m, lv_m = np.meshgrid(z,self.Lv_dots)
+            z_m, d_m = np.meshgrid(z,self.disc_dots)
+            return (z.real*self.V_inf.real + z.imag*self.V_inf.imag + np.sum(np.multiply( np.arctan2((z_m.imag - d_m.imag),
+                    (z_m.real - d_m.real)).T/(2*np.pi), self.Gi), axis=1).reshape(z.shape)+\
+                        np.sum(np.arctan2((z_lv_m.imag - lv_m.imag), (z_lv_m.real - lv_m.real))/\
+                            (2*np.pi) * self.gamma_p_i.reshape(-1,1), axis = 0).reshape(z.shape)).real
+            
 
     
     def init_Gi(self):
@@ -227,20 +233,22 @@ class Engine:
         """
         V_lv = self.V_t(self.Lv_dots)
         V_lv = V_lv[0] + 1j*V_lv[1]
+        print("###")
+        print(V_lv)
 
         V_pd = self.V_t(self.p_dots)
         V_pd = V_pd[0] + 1j*V_pd[1]
 
 
         #!!!!!!
-        self.tay = self.delta / np.max(np.concatenate((V_lv.reshape(-1),V_pd)))
+        self.tay = self.delta / np.max(np.absolute(V_pd))
 
         self.Lv_dots = self.Lv_dots + self.tay * V_lv
 
         new_lv_dots=  (self.p_dots + self.tay*V_pd).reshape(-1,1)
 
         # print(self.Lv_dots.shape)
-        print(new_lv_dots)
+        # print(new_lv_dots)
         self.Lv_dots= np.hstack((self.Lv_dots, new_lv_dots))
 
         new_gamma_p_i = np.array([self.Gi[i] for i in self.index_p_dots]).reshape(-1,1)
@@ -270,8 +278,8 @@ class Engine:
 
 if __name__ == "__main__":
     # V_inf= np.cos(np.pi/4) + 1j*np.sin(np.pi/4)
-    eng = Engine(obstacle_func=create_obstacle_1)
-    for i in range(1000):
+    eng = Engine(obstacle_func=create_obstacle_plate)
+    for i in range(6):
         eng.update()
     # eng.update()
     print(eng.p_dots)
@@ -295,6 +303,7 @@ if __name__ == "__main__":
 
     for i in range(len(eng.p_dots)):
         ax.plot(eng.Lv_dots[i].real, eng.Lv_dots[i].imag)
+        ax.scatter(eng.Lv_dots[i].real, eng.Lv_dots[i].imag)
 
     V = eng.V_t(z)
     
@@ -302,6 +311,8 @@ if __name__ == "__main__":
     # print(eng.V_t(eng.p_dots))
 
     # phi = eng.Phi_t(z)
+    # # print(phi[10])
+    
 
     # cmap= 'seismic'
     # levels = 50
