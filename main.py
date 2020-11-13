@@ -160,7 +160,17 @@ class Engine:
             return (np.array((self.V_inf.real, self.V_inf.imag)).reshape(-1,1) + np.sum( self._V_tech(z, self.disc_dots) *
                     self.Gi.reshape(-1,1), axis = 1)).reshape((2,*z.shape)) +\
                         np.sum(self._V_tech(z,self.Lv_dots) * self.gamma_p_i.reshape(-1,1), axis = 1).reshape(2,*z.shape)
-            # print(r.shape)
+            
+            r = (np.array((self.V_inf.real, self.V_inf.imag)).reshape(-1,1) + np.sum( self._V_tech(z, self.disc_dots) *
+                    self.Gi.reshape(-1,1), axis = 1)).reshape((2,*z.shape))
+
+
+            t = np.zeros((2,*z.shape))
+            for i in range(self.Lv_dots.shape[0]):
+                t1 = self._V_tech(z,self.Lv_dots[i])
+                t = t+ np.array([np.sum(t1[0]*self.gamma_p_i[i].reshape(-1,1),axis=0),
+                        np.sum(t1[1]*self.gamma_p_i[i].reshape(-1,1), axis=0)]).reshape((2,*z.shape))
+            return r+t
     
     def Phi_t(self,z):
         """
@@ -215,13 +225,26 @@ class Engine:
         lhs = np.vstack((lhs, np.ones(lhs.shape[-1])))
         rhs = -1*(self.kol_normals.real*self.V_inf.real + self.kol_normals.imag*self.V_inf.imag)
 
-        print(self._V_tech(self.kol_dots, self.Lv_dots).shape)
-        rhs= rhs - np.sum(np.sum(np.multiply(self._V_tech(self.kol_dots, self.Lv_dots),
-                    self.gamma_p_i.reshape(-1,1)),axis=1) * self.kol_normals, axis= 0 )
+        ###
+        test = np.zeros(rhs.shape)
+        for i in range(self.Lv_dots.shape[0]):
+            tv1 = self._V_tech(self.kol_dots, self.Lv_dots[i])
+            n_m1 = np.meshgrid(self.kol_dots, self.Lv_dots[i])[0]
+            test = test + np.sum((tv1[0]*n_m1 + tv1[1]*n_m1)*self.gamma_p_i[i].reshape(-1,1),axis = 0)
+            print(f'tv1.shape {tv1.shape}')
+            print(f'n_m1.shape {n_m1.shape}')
+            
 
-        # G0 = -1*np.sum(np.sum(self.gamma_p_i, axis=1), axis= 0)
-        # print(G0)
-        # print(rhs.shape)
+
+        # 
+        print(self._V_tech(self.kol_dots, self.Lv_dots).shape)
+        print(self.gamma_p_i.reshape(-1,1).shape)
+        # rhs= rhs - np.sum(np.sum(np.multiply(self._V_tech(self.kol_dots, self.Lv_dots),
+        #             self.gamma_p_i.reshape(-1,1)),axis=1) * self.kol_normals, axis= 0 )
+
+        rhs = rhs- test
+
+        
         rhs = np.concatenate( [rhs, [-1*np.sum(np.sum(self.gamma_p_i, axis=1), axis= 0)]])
 
         self.Gi = np.linalg.solve(lhs, rhs)
@@ -233,27 +256,31 @@ class Engine:
         """
         V_lv = self.V_t(self.Lv_dots)
         V_lv = V_lv[0] + 1j*V_lv[1]
-        print("###")
-        print(V_lv)
+        print(f'V_lv.shape {V_lv.shape}')
+        print(f'V_lv {V_lv}')
 
         V_pd = self.V_t(self.p_dots)
         V_pd = V_pd[0] + 1j*V_pd[1]
 
 
         #!!!!!!
-        self.tay = self.delta / np.max(np.absolute(V_pd))
+        self.tay = self.delta / np.max(np.abs(V_pd))
 
         self.Lv_dots = self.Lv_dots + self.tay * V_lv
 
         new_lv_dots=  (self.p_dots + self.tay*V_pd).reshape(-1,1)
 
-        # print(self.Lv_dots.shape)
+        print(f'new_lv_dots {new_lv_dots}')
+        print(f'Lv_dots.shape {self.Lv_dots.shape}')
+
+        
         # print(new_lv_dots)
-        self.Lv_dots= np.hstack((self.Lv_dots, new_lv_dots))
+        self.Lv_dots= np.hstack((new_lv_dots, self.Lv_dots))
 
         new_gamma_p_i = np.array([self.Gi[i] for i in self.index_p_dots]).reshape(-1,1)
 
-        self.gamma_p_i = np.hstack((self.gamma_p_i, new_gamma_p_i))
+        print(f'new_gamma_p_i {new_gamma_p_i}')
+        self.gamma_p_i = np.hstack((new_gamma_p_i,self.gamma_p_i))
 
 
     def update(self):
@@ -261,11 +288,13 @@ class Engine:
         шаг времени
         """
         self._update_Lv()
-        self._update_Gi()
 
+        self._update_Gi()
+        print(f'Gi {self.Gi}')
         self.n+=1
         self.t+= self.tay
-
+        
+        print(f'LV dots {self.Lv_dots}')
 
 
 
@@ -278,12 +307,13 @@ class Engine:
 
 if __name__ == "__main__":
     # V_inf= np.cos(np.pi/4) + 1j*np.sin(np.pi/4)
-    eng = Engine(obstacle_func=create_obstacle_plate)
-    for i in range(6):
+    V_inf = 1 + 0j
+    eng = Engine(V_inf = V_inf,obstacle_func=create_obstacle_plate)
+    print(eng.Gi)
+    for i in range(2):
+        print(f'{i+1}-----------------------------------')
         eng.update()
     # eng.update()
-    print(eng.p_dots)
-    print(eng.index_p_dots)
     size = 1.5
     step = 50
     # fig, ax = plt.subplots()
