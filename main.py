@@ -230,7 +230,7 @@ class Engine:
         for i in range(self.Lv_dots.shape[0]):
             tv1 = self._V_tech(self.kol_dots, self.Lv_dots[i])
             n_m1 = np.meshgrid(self.kol_dots, self.Lv_dots[i])[0]
-            test = test + np.sum((tv1[0]*n_m1 + tv1[1]*n_m1)*self.gamma_p_i[i].reshape(-1,1),axis = 0)
+            test = test + np.sum((tv1[0]*n_m1.real + tv1[1]*n_m1.imag)*self.gamma_p_i[i].reshape(-1,1),axis = 0)
             print(f'tv1.shape {tv1.shape}')
             print(f'n_m1.shape {n_m1.shape}')
             
@@ -265,6 +265,8 @@ class Engine:
 
         #!!!!!!
         self.tay = self.delta / np.max(np.abs(V_pd))
+        ###
+        self.tay = self.delta / np.max(np.abs(np.concatenate([V_lv.reshape(-1),V_pd])))
 
         self.Lv_dots = self.Lv_dots + self.tay * V_lv
 
