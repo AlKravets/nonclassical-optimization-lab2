@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 
 
@@ -175,18 +176,20 @@ class Engine:
     def Phi_t(self,z):
         """
         публичная функция для вычисления потенциала в текущий момент в точках z
-        """
-        if self.n == 0:
-            z_m, d_m = np.meshgrid(z,self.disc_dots)
-            return z.real*self.V_inf.real + z.imag*self.V_inf.imag + np.sum(np.multiply( np.arctan2((z_m.imag - d_m.imag),
-                        (z_m.real - d_m.real)).T/(2*np.pi), self.Gi), axis=1).reshape(z.shape)
-        else:
-            z_lv_m, lv_m = np.meshgrid(z,self.Lv_dots)
-            z_m, d_m = np.meshgrid(z,self.disc_dots)
-            return (z.real*self.V_inf.real + z.imag*self.V_inf.imag + np.sum(np.multiply( np.arctan2((z_m.imag - d_m.imag),
-                    (z_m.real - d_m.real)).T/(2*np.pi), self.Gi), axis=1).reshape(z.shape)+\
-                        np.sum(np.arctan2((z_lv_m.imag - lv_m.imag), (z_lv_m.real - lv_m.real))/\
-                            (2*np.pi) * self.gamma_p_i.reshape(-1,1), axis = 0).reshape(z.shape)).real
+        Не работает
+        # """
+        # if self.n == 0:
+        #     z_m, d_m = np.meshgrid(z,self.disc_dots)
+        #     return z.real*self.V_inf.real + z.imag*self.V_inf.imag + np.sum(np.multiply( np.arctan2((z_m.imag - d_m.imag),
+        #                 (z_m.real - d_m.real)).T/(2*np.pi), self.Gi), axis=1).reshape(z.shape)
+        # else:
+        #     z_lv_m, lv_m = np.meshgrid(z,self.Lv_dots)
+        #     z_m, d_m = np.meshgrid(z,self.disc_dots)
+        #     return (z.real*self.V_inf.real + z.imag*self.V_inf.imag + np.sum(np.multiply( np.arctan2((z_m.imag - d_m.imag),
+        #             (z_m.real - d_m.real)).T/(2*np.pi), self.Gi), axis=1).reshape(z.shape)+\
+        #                 np.sum(np.arctan2((z_lv_m.imag - lv_m.imag), (z_lv_m.real - lv_m.real))/\
+        #                     (2*np.pi) * self.gamma_p_i.reshape(-1,1), axis = 0).reshape(z.shape)).real
+        pass
             
 
     
@@ -229,7 +232,7 @@ class Engine:
         test = np.zeros(rhs.shape)
         for i in range(self.Lv_dots.shape[0]):
             tv1 = self._V_tech(self.kol_dots, self.Lv_dots[i])
-            n_m1 = np.meshgrid(self.kol_dots, self.Lv_dots[i])[0]
+            n_m1 = np.meshgrid(self.kol_normals, self.Lv_dots[i])[0]
             test = test + np.sum((tv1[0]*n_m1.real + tv1[1]*n_m1.imag)*self.gamma_p_i[i].reshape(-1,1),axis = 0)
             print(f'tv1.shape {tv1.shape}')
             print(f'n_m1.shape {n_m1.shape}')
@@ -237,12 +240,17 @@ class Engine:
 
 
         # 
-        print(self._V_tech(self.kol_dots, self.Lv_dots).shape)
-        print(self.gamma_p_i.reshape(-1,1).shape)
-        # rhs= rhs - np.sum(np.sum(np.multiply(self._V_tech(self.kol_dots, self.Lv_dots),
-        #             self.gamma_p_i.reshape(-1,1)),axis=1) * self.kol_normals, axis= 0 )
+        # print(self._V_tech(self.kol_dots, self.Lv_dots).shape)
+        # print(self.gamma_p_i.reshape(-1,1).shape)
+        rhs= rhs - np.sum(np.sum(np.multiply(self._V_tech(self.kol_dots, self.Lv_dots),
+                    self.gamma_p_i.reshape(-1,1)),axis=1) * np.array((self.kol_normals.real,self.kol_normals.imag)).reshape(2,-1), axis= 0 )
 
-        rhs = rhs- test
+
+        # knm = np.meshgrid(self.kol_normals, self.Lv_dots)[0]
+        # rhs= rhs - np.sum(np.sum(np.multiply(self._V_tech(self.kol_dots, self.Lv_dots),
+        #             self.gamma_p_i.reshape(-1,1))* np.array((knm.real,knm.imag)), axis= 1 ), axis=0)
+
+        # rhs = rhs- test
 
         
         rhs = np.concatenate( [rhs, [-1*np.sum(np.sum(self.gamma_p_i, axis=1), axis= 0)]])
@@ -255,9 +263,13 @@ class Engine:
             Обновление l_v dots and коэфф. gamma_p_i и tay
         """
         V_lv = self.V_t(self.Lv_dots)
+        
         V_lv = V_lv[0] + 1j*V_lv[1]
+        
+        print(f'Lv_dots.shape {self.Lv_dots.shape}')
         print(f'V_lv.shape {V_lv.shape}')
-        print(f'V_lv {V_lv}')
+
+        # print(f'V_lv {V_lv}')
 
         V_pd = self.V_t(self.p_dots)
         V_pd = V_pd[0] + 1j*V_pd[1]
@@ -265,23 +277,30 @@ class Engine:
 
         #!!!!!!
         self.tay = self.delta / np.max(np.abs(V_pd))
-        ###
-        self.tay = self.delta / np.max(np.abs(np.concatenate([V_lv.reshape(-1),V_pd])))
+        ###выор шага tay второй вариант делает шаг tay меньше.
+        # self.tay = self.delta / np.max(np.abs(np.concatenate([V_lv.reshape(-1),V_pd])))
 
         self.Lv_dots = self.Lv_dots + self.tay * V_lv
+        # new_lv_dots = self.Lv_dots + self.tay * V_lv
+
+        #####костыль
+        self.Lv_dots = kostil(self.Lv_dots,2*self.delta)
+        # self._neproniknist(new_lv_dots)
+        # self.Lv_dots = new_lv_dots
+
 
         new_lv_dots=  (self.p_dots + self.tay*V_pd).reshape(-1,1)
 
-        print(f'new_lv_dots {new_lv_dots}')
-        print(f'Lv_dots.shape {self.Lv_dots.shape}')
+        # print(f'new_lv_dots {new_lv_dots}')
+        # print(f'Lv_dots.shape {self.Lv_dots.shape}')
 
         
         # print(new_lv_dots)
-        self.Lv_dots= np.hstack((new_lv_dots, self.Lv_dots))
+        self.Lv_dots= np.hstack((new_lv_dots,self.Lv_dots))
 
         new_gamma_p_i = np.array([self.Gi[i] for i in self.index_p_dots]).reshape(-1,1)
 
-        print(f'new_gamma_p_i {new_gamma_p_i}')
+        # print(f'new_gamma_p_i {new_gamma_p_i}')
         self.gamma_p_i = np.hstack((new_gamma_p_i,self.gamma_p_i))
 
 
@@ -292,15 +311,137 @@ class Engine:
         self._update_Lv()
 
         self._update_Gi()
-        print(f'Gi {self.Gi}')
+        # print(f'Gi {self.Gi}')
         self.n+=1
         self.t+= self.tay
         
-        print(f'LV dots {self.Lv_dots}')
+        # print(f'LV dots {self.Lv_dots}')
+
+
+    def _neproniknist(self, new_lv_dots):
+        """
+        служебная функция, которая обеспечивает непроницаемость границы
+        точно не работет с горизонтальными границами
+        """
+
+        shape = self.Lv_dots.shape
+
+        self.Lv_dots = self.Lv_dots.reshape(-1)
+        new_lv_dots = new_lv_dots.reshape(-1)
+        
+        size_dots = len(self.Lv_dots)
+
+
+        for index in range(size_dots):
+            p1 = (self.Lv_dots[index].real,self.Lv_dots[index].imag)
+            p2 = (new_lv_dots[index].real, new_lv_dots[index].imag)
+
+            for obs_index in range(len(self.p_dots)-1):
+                obs_p1 = (self.p_dots[obs_index].real, self.p_dots[obs_index].imag)
+                obs_p2 = (self.p_dots[obs_index+1].real, self.p_dots[obs_index+1].imag)
+
+                if self._check_peresec(p1,p2,obs_p1,obs_p2):
+                    k,b = self._kooef_line(obs_p1,obs_p2)
+                    #определение метоположения точки p1
+                    lbd = -2*int((k*p1[0] + b) < p1[1]) +1
+                    new_p2 = self._project_dot_on_line(k,b+lbd*2*self.delta, p1)
+
+                    new_lv_dots[index] = new_p2[0]+1j*new_p2[1]
+        
+        self.Lv_dots = new_lv_dots.reshape(shape)
+
+    
+    def _check_peresec(self, p1,p2, obs_p1,obs_p2):
+        """
+        служебная функция, проверяет пересечение 2 отрезков, каждый задан 2 точками вида (x,y)
+        """
+        return (p2[0] >= obs_p1[0]) and (obs_p2[0] >= p1[0]) and (p2[1] >= obs_p1[1]) and (obs_p2[1] >= p1[1])
+
+    def _kooef_line(self,obs_p1, obs_p2):
+        """
+        служебная функция, возврящает коэф. прямой от 2 точек.
+        """
+        return (obs_p2[1] - obs_p1[1])/(obs_p2[0] - obs_p1[0]), (obs_p1[1] - obs_p1[0]*(obs_p2[1] - obs_p1[1])/(obs_p2[0] - obs_p1[0]))
+
+
+    def _project_dot_on_line(self,k,b,p):
+        """
+        служебная функция проэктирования точки на прямую 
+        """
+        y = (p[1] + k*p[0] + b)/2
+        return ((y - b)/k , y)
 
 
 
 
+def kostil(lv_dots, two_delta):
+    """
+    костиль для непроникності платівки
+    """
+    shape = lv_dots.shape
+    lv_dots = lv_dots.reshape(-1)
+    for i in range(len(lv_dots)):
+        if -0.5 <= lv_dots[i].imag <= 0.5 and lv_dots[i].real < two_delta:
+            lv_dots[i] = two_delta + 1j*lv_dots[i].imag
+            
+
+    return lv_dots.reshape(shape)
+
+
+def main_animation_plate():
+    """
+    """
+    name = "result_plate1.gif"
+    frames = 500
+    size = 1.5
+    step = 50
+    
+    scopes  = ((-size, 5*size),(-size, 5*size))
+    x = np.linspace(scopes[0][0], scopes[0][1], step)
+    y = np.linspace(scopes[1][0], scopes[1][1], step)
+    xy = np.meshgrid(x, y)
+    z = xy[0] + 1j*xy[1]
+
+    V_inf= np.cos(np.pi/4) + 1j*np.sin(np.pi/4)
+    # V_inf = 1 + 0j
+    eng = Engine(V_inf = V_inf,obstacle_func=create_obstacle_plate)
+    
+    fig = plt.figure()
+    ax = plt.axes(xlim=scopes[0], ylim=scopes[1])
+    
+    scatter1 = ax.scatter([], [],c= 'r')
+    scatter2 = ax.scatter([], [],c= 'b')
+    V = eng.V_t(z)
+    qv = ax.quiver(x, y, V[0], V[1])
+
+
+    def init():
+        V = eng.V_t(z)
+        qv.set_UVC(V[0],V[1])
+        ax.set_title(f"t = {eng.t}, n = {eng.n}")
+        obstacle = eng.obstacle
+        ax.plot(obstacle[0], obstacle[1], linewidth= 2, color = 'black')
+        
+        return scatter1, scatter2, qv,
+        
+
+    def animate(frame):
+        eng.update()
+        V = eng.V_t(z)
+        qv.set_UVC(V[0],V[1])
+        ax.set_title(f"t = {round(eng.t,3)}, n = {eng.n}")
+        
+        scatter1.set_offsets(np.c_[eng.Lv_dots[0].real,eng.Lv_dots[0].imag])
+        scatter2.set_offsets(np.c_[eng.Lv_dots[1].real,eng.Lv_dots[1].imag])
+        
+        return scatter1, scatter2, qv,
+        
+
+    anim = animation.FuncAnimation(fig, animate, init_func=init,
+                               frames=frames,interval=100, blit=True)
+ 
+    # Сохраняем анимацию как gif файл
+    anim.save(name)
 
 
 
@@ -308,23 +449,29 @@ class Engine:
 
 
 if __name__ == "__main__":
-    # V_inf= np.cos(np.pi/4) + 1j*np.sin(np.pi/4)
-    V_inf = 1 + 0j
-    eng = Engine(V_inf = V_inf,obstacle_func=create_obstacle_plate)
-    print(eng.Gi)
-    for i in range(2):
-        print(f'{i+1}-----------------------------------')
-        eng.update()
-    # eng.update()
     size = 1.5
     step = 50
     # fig, ax = plt.subplots()
-    scopes  = ((-size, size),(-size, size))
+    scopes  = ((-size, 5*size),(-size, 5*size))
     x = np.linspace(scopes[0][0], scopes[0][1], step)
     y = np.linspace(scopes[1][0], scopes[1][1], step)
     
+    
     fig = plt.figure()
     ax = plt.axes(xlim=scopes[0], ylim=scopes[1])
+
+
+
+    V_inf= np.cos(np.pi/4) + 1j*np.sin(np.pi/4)
+    # V_inf = 1 + 0j
+    eng = Engine(V_inf = V_inf,obstacle_func=create_obstacle_plate)
+    print(eng.Gi)
+    for i in range(30):
+        print(f'{i+1}-----------------------------------')
+        eng.update()
+        
+    # eng.update()
+
 
     # матрица комплексных чисел
     xy = np.meshgrid(x, y)
@@ -338,6 +485,7 @@ if __name__ == "__main__":
         ax.scatter(eng.Lv_dots[i].real, eng.Lv_dots[i].imag)
 
     V = eng.V_t(z)
+    # V = eng.V_t(eng.Lv_dots.reshape(-1))
     
 
     # print(eng.V_t(eng.p_dots))
@@ -354,7 +502,8 @@ if __name__ == "__main__":
     #     cs= ax.contourf(x, y,phi, levels = levels,cmap=plt.get_cmap(cmap))
     
     # cbar= plt.colorbar(cs, extendfrac='auto')
-    ax.quiver(x,y,V[0],V[1])
+    # ax.quiver(eng.Lv_dots.reshape(-1).real,eng.Lv_dots.reshape(-1).imag,V[0],V[1])
+    ax.quiver(x,y,V[0], V[1])
     plt.show()
 
-    
+    # main_animation_plate()
