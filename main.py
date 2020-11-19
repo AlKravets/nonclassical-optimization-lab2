@@ -147,6 +147,13 @@ class Engine:
                 1j*(self.disc_dots[1:].real - self.disc_dots[:-1].real)) / \
                     np.sqrt( (self.disc_dots[1:].real - self.disc_dots[:-1].real)**2  +
                         (self.disc_dots[1:].imag - self.disc_dots[:-1].imag)**2)
+
+        self.__normals_in_p_dots = [self.kol_normals[i] for i in self.index_p_dots[:-1]]
+        self.__normals_in_disc_dots = np.concatenate((self.kol_normals,[self.kol_normals[-1]]))
+        for index in self.index_p_dots[1:-1]:
+            self.__normals_in_disc_dots[index] = (self.__normals_in_disc_dots[index-1] + self.__normals_in_disc_dots[index+1])
+            self.__normals_in_disc_dots[index] /= np.abs(self.__normals_in_disc_dots[index])
+        print(f'__normals_in_disc_dots {self.__normals_in_disc_dots}')
         
     
     def V_t(self,z):
@@ -162,16 +169,16 @@ class Engine:
                     self.Gi.reshape(-1,1), axis = 1)).reshape((2,*z.shape)) +\
                         np.sum(self._V_tech(z,self.Lv_dots) * self.gamma_p_i.reshape(-1,1), axis = 1).reshape(2,*z.shape)
             
-            r = (np.array((self.V_inf.real, self.V_inf.imag)).reshape(-1,1) + np.sum( self._V_tech(z, self.disc_dots) *
-                    self.Gi.reshape(-1,1), axis = 1)).reshape((2,*z.shape))
+            # r = (np.array((self.V_inf.real, self.V_inf.imag)).reshape(-1,1) + np.sum( self._V_tech(z, self.disc_dots) *
+            #         self.Gi.reshape(-1,1), axis = 1)).reshape((2,*z.shape))
 
 
-            t = np.zeros((2,*z.shape))
-            for i in range(self.Lv_dots.shape[0]):
-                t1 = self._V_tech(z,self.Lv_dots[i])
-                t = t+ np.array([np.sum(t1[0]*self.gamma_p_i[i].reshape(-1,1),axis=0),
-                        np.sum(t1[1]*self.gamma_p_i[i].reshape(-1,1), axis=0)]).reshape((2,*z.shape))
-            return r+t
+            # t = np.zeros((2,*z.shape))
+            # for i in range(self.Lv_dots.shape[0]):
+            #     t1 = self._V_tech(z,self.Lv_dots[i])
+            #     t = t+ np.array([np.sum(t1[0]*self.gamma_p_i[i].reshape(-1,1),axis=0),
+            #             np.sum(t1[1]*self.gamma_p_i[i].reshape(-1,1), axis=0)]).reshape((2,*z.shape))
+            # return r+t
     
     def Phi_t(self,z):
         """
@@ -280,14 +287,14 @@ class Engine:
         ###выор шага tay второй вариант делает шаг tay меньше.
         # self.tay = self.delta / np.max(np.abs(np.concatenate([V_lv.reshape(-1),V_pd])))
 
-        self.Lv_dots = self.Lv_dots + self.tay * V_lv
-        # new_lv_dots = self.Lv_dots + self.tay * V_lv
+        # self.Lv_dots = self.Lv_dots + self.tay * V_lv
+        new_lv_dots = self.Lv_dots + self.tay * V_lv
 
         #####костыль
-        self.Lv_dots = kostil(self.Lv_dots,2*self.delta)
+        # self.Lv_dots = kostil(self.Lv_dots,2*self.delta)
         # self._neproniknist(new_lv_dots)
         # self.Lv_dots = new_lv_dots
-
+        self.Lv_dots = self._neproniknist1(new_lv_dots)
 
         new_lv_dots=  (self.p_dots + self.tay*V_pd).reshape(-1,1)
 
@@ -317,6 +324,87 @@ class Engine:
         
         # print(f'LV dots {self.Lv_dots}')
 
+
+    def __list_with_close_points(self,dot):
+        """
+        Возвращает список индексов точек из self.disc_dots, которые ближе к dot ( complex) на 2*delta
+        """
+        res = []
+        for i in range(len(self.disc_dots)):
+            if np.abs(self.disc_dots[i] - dot) < 2*self.delta:
+                res.append(i)
+        return res
+    def _neproniknist1(self, new_lv_dots):
+        """
+        
+        """
+
+        shape = self.Lv_dots.shape
+
+        old_dots = self.Lv_dots.reshape(-1)
+        new_lv_dots = new_lv_dots.reshape(-1)
+        
+        size_dots = len(new_lv_dots)
+
+        for i in range(size_dots):
+            close_dots = self.__list_with_close_points(new_lv_dots[i])
+            if len(close_dots):
+                print(f'dot_number {i}')
+                print(f'close_dots {close_dots}')
+                print(f'koodrs close dots {[self.disc_dots[i] for i in close_dots]}')
+                new_lv_dots[i] = self.__find_first_new_dot(new_lv_dots[i], old_dots[i], close_dots)
+        return new_lv_dots.reshape(shape)
+
+
+    def __find_first_new_dot(self,new_dot, old_dot, close_dots):
+        """
+        Поиск новой точки (проекция новой точки на сферу в одной из точек close_dots по нормале в этой точке)
+        """
+        # index_nearest_dot = min(close_dots, key = lambda index: np.abs(self.disc_dots[index] - new_dot))
+        index_nearest_dot = self.__find_nearest_dot(close_dots,new_dot)
+        print(f'index_nearest_dot {index_nearest_dot}')
+        # normal = self.__find_normal_for_nearest_dot(index_nearest_dot)
+        normal = self.__normals_in_disc_dots[index_nearest_dot]
+
+        nearest_dot = self.disc_dots[index_nearest_dot]
+
+        sign_old= self.__sign_on_normal(old_dot,nearest_dot,normal)
+        sign_new = self.__sign_on_normal(new_dot,nearest_dot,normal)
+
+        print(f'sign {sign_old}')
+        print(f'sign new dot {self.__sign_on_normal(new_dot,nearest_dot,normal)}')
+
+        if sign_old == sign_new:
+            koef = sign_old*(2*self.delta - np.abs(nearest_dot - new_dot))
+        else:
+            koef = sign_old*(2*self.delta + np.abs(nearest_dot - new_dot))
+
+        return new_dot+koef*normal
+        
+
+    def __find_nearest_dot(self,  close_dots, new_dot):
+        # for item in close_dots:
+        #     if item in self.index_p_dots[1:-1]:
+        #         return item
+        return min(close_dots, key = lambda index: np.abs(self.disc_dots[index] - new_dot))
+
+
+    def __sign_on_normal(self,dot, nearest_dot, normal):
+        return (normal.real*(dot-nearest_dot).real + normal.imag*(dot-nearest_dot).imag)/\
+            np.abs(normal.real*(dot-nearest_dot).real + normal.imag*(dot-nearest_dot).imag)
+
+
+    def __find_normal_for_nearest_dot(self,index_nearest_dot):
+        print([x for x in self.index_p_dots if index_nearest_dot > x])
+        list1 = [x for x in self.index_p_dots if index_nearest_dot >= x]
+        if not len(list1):
+            return self.__normals_in_p_dots[-1]
+        else:
+            first_index = list1[0]
+        for i in range(len(self.p_dots)-1):
+            if self.disc_dots[first_index]== self.p_dots[i]:
+                return self.__normals_in_p_dots[i]
+            
 
     def _neproniknist(self, new_lv_dots):
         """
@@ -392,11 +480,11 @@ def main_animation_plate():
     """
     """
     name = "result_plate1.gif"
-    frames = 500
+    frames = 200
     size = 1.5
     step = 50
     
-    scopes  = ((-size, 5*size),(-size, 5*size))
+    scopes  = ((-1*size, 15*size),(-5*size, 5*size))
     x = np.linspace(scopes[0][0], scopes[0][1], step)
     y = np.linspace(scopes[1][0], scopes[1][1], step)
     xy = np.meshgrid(x, y)
@@ -443,7 +531,67 @@ def main_animation_plate():
     # Сохраняем анимацию как gif файл
     anim.save(name)
 
+def main_animation():
+    """
+    """
+    name = "result_plate1.gif"
+    frames = 1000
+    size = 1.5
+    step = 50
+    
+    scopes  = ((-1*size, 5*size),(-5*size, 5*size))
+    x = np.linspace(scopes[0][0], scopes[0][1], step)
+    y = np.linspace(scopes[1][0], scopes[1][1], step)
+    xy = np.meshgrid(x, y)
+    z = xy[0] + 1j*xy[1]
 
+    # V_inf= np.cos(np.pi/4) + 1j*np.sin(np.pi/4)
+    V_inf = 1 + 0j
+    eng = Engine(V_inf = V_inf,obstacle_func=create_obstacle_plate)
+    
+    fig = plt.figure()
+    ax = plt.axes(xlim=scopes[0], ylim=scopes[1])
+    
+    scatter_plots = []
+
+    for _ in range(len(eng.p_dots)):
+        scatter_plots.append(ax.scatter([], []))
+
+    # scatter1 = ax.scatter([], [],c= 'r')
+    # scatter2 = ax.scatter([], [],c= 'b')
+    V = eng.V_t(z)
+    qv = ax.quiver(x, y, V[0], V[1])
+
+
+    def init():
+        V = eng.V_t(z)
+        qv.set_UVC(V[0],V[1])
+        ax.set_title(f"t = {eng.t}, n = {eng.n}")
+        obstacle = eng.obstacle
+        ax.plot(obstacle[0], obstacle[1], linewidth= 2, color = 'black')
+        
+        return qv,
+        
+
+    def animate(frame):
+        eng.update()
+        V = eng.V_t(z)
+        qv.set_UVC(V[0],V[1])
+        ax.set_title(f"t = {round(eng.t,3)}, n = {eng.n}")
+        
+        for i in range(len(eng.p_dots)):
+            scatter_plots[i].set_offsets(np.c_[eng.Lv_dots[i].real,eng.Lv_dots[i].imag])
+        # scatter1.set_offsets(np.c_[eng.Lv_dots[0].real,eng.Lv_dots[0].imag])
+        # scatter2.set_offsets(np.c_[eng.Lv_dots[1].real,eng.Lv_dots[1].imag])
+        
+        return qv,
+        
+
+    anim = animation.FuncAnimation(fig, animate, init_func=init,
+                               frames=frames,interval=100, blit=True)
+ 
+    # Сохраняем анимацию как gif файл
+    anim.save(name)
 
 
 
@@ -452,7 +600,7 @@ if __name__ == "__main__":
     size = 1.5
     step = 50
     # fig, ax = plt.subplots()
-    scopes  = ((-size, 5*size),(-size, 5*size))
+    scopes  = ((-size, 1*size),(-size, 1*size))
     x = np.linspace(scopes[0][0], scopes[0][1], step)
     y = np.linspace(scopes[1][0], scopes[1][1], step)
     
@@ -464,9 +612,10 @@ if __name__ == "__main__":
 
     V_inf= np.cos(np.pi/4) + 1j*np.sin(np.pi/4)
     # V_inf = 1 + 0j
-    eng = Engine(V_inf = V_inf,obstacle_func=create_obstacle_plate)
+    eng = Engine(V_inf = V_inf,obstacle_func=create_obstacle_1)
     print(eng.Gi)
-    for i in range(30):
+    print(f'eng.index_p_dots {eng.index_p_dots}')
+    for i in range(10):
         print(f'{i+1}-----------------------------------')
         eng.update()
         
@@ -504,6 +653,7 @@ if __name__ == "__main__":
     # cbar= plt.colorbar(cs, extendfrac='auto')
     # ax.quiver(eng.Lv_dots.reshape(-1).real,eng.Lv_dots.reshape(-1).imag,V[0],V[1])
     ax.quiver(x,y,V[0], V[1])
-    plt.show()
+    # plt.show()
 
+    main_animation()
     # main_animation_plate()
