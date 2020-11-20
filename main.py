@@ -7,7 +7,6 @@ import matplotlib.animation as animation
 
 # функции создания преграды
 def create_obstacle_plate(x0,y0):
-    # return np.array([[x0, x0], [y0 - 1, y0 + 1]])
     return np.array([[x0, x0], [y0 - 0.5, y0 + 0.5]])
 
 
@@ -599,7 +598,7 @@ def main_animation_with_params(name = "result_plate.gif",frames = 200, start_ani
                                frames=frames,interval=100, blit=True)
  
     # Сохраняем анимацию как gif файл
-    anim.save(name)
+    anim.save(name, writer='pillow')
 
 
 if __name__ == "__main__":
@@ -646,7 +645,9 @@ if __name__ == "__main__":
     # # ax.quiver(eng.p_dots.real,eng.p_dots.imag,V[0], V[1])
     # # plt.show()
     
+    name = 'gifs/error_one.gif'
 
     size =1.5
-    scopes = ((-1*size, 10*size),(-2*size, 2*size))
-    main_animation_with_params(frames=200, start_anim_from_moment=400,scopes=scopes, obstacle_func=create_obstacle_1, figsize=(16,9))
+    scopes = ((-1*size,1*size),(-1*size, 1*size))
+    V_inf= 1 + 0j
+    main_animation_with_params(V_inf = V_inf, frames=50, start_anim_from_moment=190,scopes=scopes, obstacle_func=create_obstacle_1, name = name)
