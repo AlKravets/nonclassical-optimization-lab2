@@ -129,6 +129,6 @@ def obstacle_picture(obstacle ,disctret_osob, kolok_dots, normals, size = 1):
     plt.show()
 
 if __name__ == "__main__":
-    eng = Engine(reverse= False)
+    eng = Engine(reverse= True, obstacle_func=create_obstacle_1)
 
     obstacle_picture(eng.obstacle, eng.disc_dots, eng.kol_dots, eng.kol_normals)
