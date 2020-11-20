@@ -4,10 +4,10 @@
 __pycache__/
 .vscode
 .ipynb_checkpoints
-*.aux
-*.dvi
-*.log
-*.pdf
-*.gz
-*.gif
-*.png
+/*.aux
+/*.dvi
+/*.log
+/*.pdf
+/*.gz
+/*.gif
+/*.png
