@@ -89,7 +89,8 @@ def create_obstacle_5(x0,y0):
 size =1.5
 scopes = ((-1*size, 5*size),(-1*size, 5*size))
 V_inf= np.cos(np.pi/4) + 1j*np.sin(np.pi/4)
-main_animation_with_params(V_inf = V_inf, frames=500,scopes=scopes, obstacle_func=create_obstacle_plate, name = name)
+main_animation_with_params(V_inf = V_inf, frames=500,scopes=scopes, obstacle_func=create_obstacle_plate,
+                            name = name, figsize=(6,6))
 ```
 
 ![/gifs/plate1.gif](/gifs/plate1.gif )
@@ -102,7 +103,7 @@ size =1.5
 scopes = ((-1*size,10*size),(-3*size, 3*size))
 V_inf= 1 + 0j
 main_animation_with_params(V_inf = V_inf, frames=500,start_anim_from_moment=450,scopes=scopes,
-                            obstacle_func=create_obstacle_plate, name = name)
+                            obstacle_func=create_obstacle_plate, name = name, figsize= (11,6))
 ```
 ![/gifs/plate2.gif](/gifs/plate2.gif )
 
@@ -113,7 +114,8 @@ main_animation_with_params(V_inf = V_inf, frames=500,start_anim_from_moment=450,
 size =1.5
 scopes = ((-1*size,5*size),(-1*size, 5*size))
 V_inf= np.cos(np.pi/4) + 1j*np.sin(np.pi/4)
-main_animation_with_params(V_inf = V_inf, frames=500,scopes=scopes, obstacle_func=create_obstacle_1, name = name)
+main_animation_with_params(V_inf = V_inf, frames=500,scopes=scopes, obstacle_func=create_obstacle_1,
+                            name = name, figsize=(6,6))
 ```
 
 ![/gifs/one1.gif](/gifs/one1.gif )
@@ -125,7 +127,8 @@ main_animation_with_params(V_inf = V_inf, frames=500,scopes=scopes, obstacle_fun
 size =1.5
 scopes = ((-1*size,10*size),(-3*size, 3*size))
 V_inf= 1 + 0j
-main_animation_with_params(V_inf = V_inf, frames=500,scopes=scopes, obstacle_func=create_obstacle_1, name = name)
+main_animation_with_params(V_inf = V_inf, frames=500,scopes=scopes, obstacle_func=create_obstacle_1,
+                            name = name, figsize= (11,6))
 ```
 
 ![/gifs/one2.gif](/gifs/one2.gif )

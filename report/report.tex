@@ -76,7 +76,7 @@
 	\end{align}
 \section{Моделювання кінематики}
 
-	Необхідно дискретизувати контур, розіб'ємо його на $M$ точок $(x_{0j}, y_0j), j = \overbrace{1,M}$. Тепер знайдемо точки колокації:
+	Необхідно дискретизувати контур, розіб'ємо його на $M$ точок $(x_{0j}, y_{0j}), j = \overline{1,M}$. Тепер знайдемо точки колокації:
 	\begin{eqnarray}
 		x_k = \frac{x_{0k} + x_{0, k+1}}{2} \nonumber \\
 		y_k = \frac{y_{0k} + y_{0, k+1}}{2} \nonumber
@@ -173,6 +173,43 @@
 		 Тепер можна обрахувати коефіцієнт $k = \lambda|z_0 - z_1|$. Отже змінимо точку $z_1(t_{n+1}) = z_1(t_n) + k\vec{n_0}$.
 		
 \section{Результати}
+	\subsection{Перешкода у вигляді пластинки}
+		Розглянемо результати при $V_{\infty} = \cos(\pi/4) + i\sin(\pi/4)$.
+		
+		\begin{figure}[ht]
+			\begin{center}\includegraphics[scale=0.5]{result_plate1} \end{center}
+			\caption{Результат при швидкості $V_{\infty} = \cos(\pi/4) + i\sin(\pi/4)$}
+			\label{fig:result_plate1}
+		\end{figure}
+
+		Розглянемо результати при $V_{\infty} = 1 + 0i$. При такій швидкості \textit{"красиві"} вихори виникають пізніше.
+		
+		\begin{figure}[ht]
+			\begin{center}\includegraphics[scale=0.5]{result_plate2} \end{center}
+			\caption{Результат при швидкості $V_{\infty} = 1 +0i$}
+			\label{fig:result_plate2}
+		\end{figure}
+	
+	\subsection{Перешкода у вигляді одиниці}
+	
+		Розглянемо результати при $V_{\infty} = \cos(\pi/4) + i\sin(\pi/4)$.
+	
+		\begin{figure}[ht]
+			\begin{center}\includegraphics[scale=0.5]{result_one1} \end{center}
+			\caption{Результат при швидкості $V_{\infty} = \cos(\pi/4) + i\sin(\pi/4)$}
+			\label{fig:result_one1}
+		\end{figure}
+	
+		Розглянемо результати при $V_{\infty} = 1 + 0i$.
+		\newpage
+		
+		\begin{figure}[ht]
+			\begin{center}\includegraphics[scale=0.5]{result_one2} \end{center}
+			\caption{Результат при швидкості $V_{\infty} = 1 +0i$}
+			\label{fig:result_one2}
+		\end{figure}
+		
+	\subsection{Анімації}
 	Щоб переглянути анімації перейдіть за \href{https://github.com/AlKravets/nonclassical-optimization-lab2}{посиланням}.
 
 \section{Висновок}
